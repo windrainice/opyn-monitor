@@ -186,14 +186,13 @@ const categorizeOptions = (
   options.forEach((option) => {
     if (option.name === '') return;
     if (option.collateral === USDC && option.strike === USDC && option.underlying === OPYN_ETH) {
-      console.log(`hide it now`)
-      // const strikePriceInUSD = parseStrikePriceUSDCFromName(option, 'put')
-      // const put = {
-      //   ...option,
-      //   type: 'put' as 'put',
-      //   strikePriceInUSD,
-      // };
-      // ethPuts.push(put);
+      const strikePriceInUSD = parseStrikePriceUSDCFromName(option, 'put')
+      const put = {
+        ...option,
+        type: 'put' as 'put',
+        strikePriceInUSD,
+      };
+      ethPuts.push(put);
     } else if (
       option.collateral === OPYN_ETH &&
       option.strike === OPYN_ETH &&
