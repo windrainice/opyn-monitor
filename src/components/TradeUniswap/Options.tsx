@@ -7,6 +7,8 @@ import {
 } from '@aragon/ui';
 
 import TradeModal from './TradeModal'
+
+import { useTokenPriceCoinGeck } from '../../hooks'
 import { ETHOption, ethOptionWithStat } from '../../types';
 import { WETH, OPYN_ETH } from '../../constants/tokens'
 import { getGreeks } from './utils'
@@ -75,6 +77,8 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
     setDisplayOptions(displayOptions)
   }, [selectedExpiryIdx, selectedType, allOptions, distinctExpirys, selectedUnderlyingIdx, underlyingTypes])
 
+  const tokenPrice = useTokenPriceCoinGeck(underlyingTypes[selectedUnderlyingIdx])
+
   return (
     <div>
       <div style={{ display: 'flex' }}>
@@ -97,7 +101,7 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
           />
         </div>
         <div style={{ paddingTop: '36px', paddingLeft: '36px' }}>
-          Spot Price: {spotPrice.toFixed(2)} USD
+          Spot Price: {tokenPrice.toFixed(2)} USD
         </div>
 
       </div>
@@ -131,7 +135,7 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
         renderEntry={(option: ethOptionWithStat) => {
 
           const priceInUSD = optionPrices.find(o => o.oToken === option.addr)?.price || new BigNumber(0);
-          const greeks = getGreeks(option, priceInUSD, spotPrice)
+          const greeks = getGreeks(option, priceInUSD, tokenPrice)
           const balance = balances.find(b => b.oToken === option.addr)?.balance || new BigNumber(0)
           return [
             option.strikePriceInUSD,
@@ -145,7 +149,7 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
             greeks.Gamma,
             greeks.Vega,
             greeks.Theta,
-            <TradeModal oToken={option} spotPrice={spotPrice} balance={balance} />
+            <TradeModal oToken={option} spotPrice={tokenPrice} balance={balance} />
           ];
         }}
       />
