@@ -23,7 +23,7 @@ function TradeUniswap() {
 
   const { user } = useContext(userContext)
   const spotPrice = useETHSpotPrice()
-  const { ethCalls: calls, ethPuts: puts } = useOptions()
+  const { ethCalls: calls, ethPuts: puts, otherPuts } = useOptions()
   
   // Update token price every 5 secs
   const [tokenPrices, setTokenPrices] = useState<{ oToken: string, price: BigNumber }[]>([])
@@ -31,9 +31,9 @@ function TradeUniswap() {
   const [allEthOptions, setAllEthOptions] = useState<types.ethOptionWithStat[]>([])
 
   useEffect(()=>{
-    const allOptions = puts.concat(calls).filter((o) => o.expiry > Date.now() / 1000)
+    const allOptions = puts.concat(calls).concat(otherPuts).filter((o) => o.expiry > Date.now() / 1000)
     setAllEthOptions(allOptions)
-  }, [puts, calls])
+  }, [puts, calls, otherPuts])
 
   useEffect(() => {
     let cancelled = false

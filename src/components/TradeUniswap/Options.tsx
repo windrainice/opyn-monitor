@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import BigNumber from 'bignumber.js';
 
 import { useHistory } from 'react-router-dom'
@@ -8,7 +8,7 @@ import {
 
 import TradeModal from './TradeModal'
 import { ETHOption, ethOptionWithStat } from '../../types';
-
+import { WETH, OPYN_ETH } from '../../constants/tokens'
 import { getGreeks } from './utils'
 import { toTokenUnitsBN } from '../../utils/number';
 
@@ -31,34 +31,62 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
 
   const [selectedExpiryIdx, setExpiryIdx] = useState(0);
   const [selectedType, setSelectedType] = useState(0)
+  const [selectedUnderlyingIdx, setSelectedUnderlying] = useState(0)
 
   // const [openInterests, setOIs] = useState<{ oToken: string, totalSupply: string }[]>([])
   const [displayedOptions, setDisplayOptions] = useState<ETHOption[]>([])
 
   const [distinctExpirys, setDistinctExpirys] = useState<number[]>([])
 
-  useMemo(()=>{
+  const underlyingTypes = useMemo(() => {
+    const types = allOptions.map(option => {
+      if (option.type === 'call') return option.strike;
+      if (option.underlying === WETH) {
+        return OPYN_ETH
+      }
+      return option.underlying
+    })
+    return [...new Set(types)]
+  }, [allOptions])
+
+  useEffect(() => {
     const distinctExpirys = [...new Set(allOptions.map((option) => option.expiry))].sort((a, b) => a > b ? 1 : -1);
     setDistinctExpirys(distinctExpirys)
   }, [allOptions])
 
-
   // Update displayed options
-  useMemo(() => {
+  useEffect(() => {
+    const isPut = selectedType === 0;
     const displayOptions = allOptions
       .filter((option) => {
         return selectedExpiryIdx === 0 ? true : option.expiry === distinctExpirys[selectedExpiryIdx - 1]
       })
       .filter((option) => (option.type === 'call') === Boolean(selectedType))
+      .filter((option) => {
+        if(isPut) {
+          if (underlyingTypes[selectedUnderlyingIdx] === OPYN_ETH) {
+            return option.underlying === WETH
+          }
+          return option.underlying === underlyingTypes[selectedUnderlyingIdx]
+        }
+        else return option.strike === underlyingTypes[selectedUnderlyingIdx]
+      })
       .sort((a, b) => a.strikePriceInUSD > b.strikePriceInUSD ? 1 : -1)
     setDisplayOptions(displayOptions)
-  }, [selectedExpiryIdx, selectedType, allOptions, distinctExpirys])
+  }, [selectedExpiryIdx, selectedType, allOptions, distinctExpirys, selectedUnderlyingIdx, underlyingTypes])
 
   return (
     <div>
       <div style={{ display: 'flex' }}>
         <Header primary="Option Trading" />
         <img alt="icon" style={{ paddingTop: 24, paddingLeft: 14, height: 64, width: 54 }} src={'https://i.imgur.com/4eX8GlY.png'} />
+        <div style={{ paddingTop: '28px', paddingLeft: '36px' }}>
+          <DropDown
+            items={(underlyingTypes).map((option) => option.symbol)}
+            selected={selectedUnderlyingIdx}
+            onChange={setSelectedUnderlying}
+          />
+        </div>
         <div style={{ paddingTop: '28px', paddingLeft: '36px' }}>
           <DropDown
             items={['All Dates']
@@ -71,11 +99,11 @@ function Options({ optionPrices, spotPrice, balances, allOptions }: OptionBoardP
         <div style={{ paddingTop: '36px', paddingLeft: '36px' }}>
           Spot Price: {spotPrice.toFixed(2)} USD
         </div>
-        
+
       </div>
-      <div style={{display: 'flex', alignContent: 'left'}}> 
-        <div style={{marginLeft: 'auto', opacity: 0.5, fontSize: 14}}>
-          Not satisfied with the price? Create custom orders with <LinkBase onClick={()=>history.push('/trade/0x')} style={{color: 'white'}}> 0x Trade </LinkBase> 
+      <div style={{ display: 'flex', alignContent: 'left' }}>
+        <div style={{ marginLeft: 'auto', opacity: 0.5, fontSize: 14 }}>
+          Not satisfied with the price? Create custom orders with <LinkBase onClick={() => history.push('/trade/0x')} style={{ color: 'white' }}> 0x Trade </LinkBase>
         </div>
       </div>
       <Tabs
