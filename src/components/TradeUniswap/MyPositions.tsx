@@ -10,7 +10,7 @@ import { getGreeks } from './utils'
 
 type MyPositionsProps = {
   user: string,
-  spotPrice: BigNumber,
+  underlyingSpotPrice: BigNumber,
   balances: {
     oToken: string,
     balance: BigNumber
@@ -22,13 +22,13 @@ type MyPositionsProps = {
   allOptions: types.ETHOption[]
 }
 
-// const defaultPostitionGreeks = {Delta: 0, Gamma: 0, Theta: 0, Rho: 0, Vega:0, totalSize: 0}
+const defaultPostitionGreeks = {Delta: 0, Gamma: 0, Theta: 0, Rho: 0, Vega:0, totalSize: 0}
 
-function MyPositions({ user, spotPrice, tokenPrices, balances, allOptions }: MyPositionsProps) {
+function MyPositions({ user, underlyingSpotPrice, tokenPrices, balances, allOptions }: MyPositionsProps) {
 
   const [vaults, setVaults] = useState<vault[]>([])
   const [positions, setPositions] = useState<position[]>([])
-  // const [aggregatedPositionGreeks, setPositionGreeks] = useState<PositionGreekType>(defaultPostitionGreeks)
+  const [aggregatedPositionGreeks, setPositionGreeks] = useState<PositionGreekType>(defaultPostitionGreeks)
   const [positionsPage, setPPage] = useState(0)
   // Get vaults
   useMemo(async () => {
@@ -62,7 +62,7 @@ function MyPositions({ user, spotPrice, tokenPrices, balances, allOptions }: MyP
         .find(v => v.oToken === option.addr)
       const price = tokenPrices.find(entry => entry.oToken === option.addr)?.price || new BigNumber(0)
       // todo update the spot price here for different underlyings
-      const greeks = getGreeks(option, price, spotPrice)
+      const greeks = getGreeks(option, price, underlyingSpotPrice)
       if (vault || rawBalance.gt(0)) {
         const bought = toTokenUnitsBN(rawBalance, option.decimals)
         const sold = toTokenUnitsBN(vault ? vault.oTokensIssued : 0, option.decimals)
@@ -82,38 +82,25 @@ function MyPositions({ user, spotPrice, tokenPrices, balances, allOptions }: MyP
       }
       setPositions(userPositions)
     })
-  }, [vaults, spotPrice, tokenPrices, balances, allOptions])
+  }, [vaults, underlyingSpotPrice, tokenPrices, balances, allOptions])
 
   // update aggregated position greeks
-  // useEffect(() => {
-  //   const positionGreeks = positions.reduce((prev, current) => {
-  //     return {
-  //       Delta: (prev.Delta) + current.size.times(current.Delta).toNumber(),
-  //       Gamma: (prev.Gamma) + current.size.times(current.Gamma).toNumber(),
-  //       Vega: (prev.Vega) + current.size.times(current.Vega).toNumber(),
-  //       Theta: (prev.Theta) + current.size.times(current.Theta).toNumber(),
-  //       Rho: (prev.Rho) + current.size.times(current.Rho).toNumber(),
-  //       totalSize: (prev.totalSize) + current.size.toNumber()
-  //     }
-  //   }, defaultPostitionGreeks)
-  //   setPositionGreeks(positionGreeks)
-  // }, [positions])
+  useEffect(() => {
+    const positionGreeks = positions.reduce((prev, current) => {
+      return {
+        Delta: (prev.Delta) + current.size.times(current.Delta).toNumber(),
+        Gamma: (prev.Gamma) + current.size.times(current.Gamma).toNumber(),
+        Vega: (prev.Vega) + current.size.times(current.Vega).toNumber(),
+        Theta: (prev.Theta) + current.size.times(current.Theta).toNumber(),
+        Rho: (prev.Rho) + current.size.times(current.Rho).toNumber(),
+        totalSize: (prev.totalSize) + current.size.toNumber()
+      }
+    }, defaultPostitionGreeks)
+    setPositionGreeks(positionGreeks)
+  }, [positions])
 
   return (
     <>
-      {/* <DataView 
-        fields={['Delta', 'Gamma', 'Vega', 'Theta', 'Rho']}
-        entries={[aggregatedPositionGreeks]}
-        entriesPerPage={5}
-        tableRowHeight={45}
-        renderEntry={(p: PositionGreekType) => [
-          (p.Delta / (p.totalSize)).toFixed(3),
-          (p.Gamma/ (p.totalSize)).toFixed(3),
-          (p.Vega/ (p.totalSize)).toFixed(3),
-          (p.Theta/ (p.totalSize)).toFixed(3),
-          (p.Rho/ (p.totalSize)).toFixed(3),
-        ]}
-      /> */}
       <DataView
         fields={['', 'Type', 'Price', 'Size', 'Delta', 'Gamma', 'Vega', 'Theta']}
         entries={positions}
@@ -131,6 +118,19 @@ function MyPositions({ user, spotPrice, tokenPrices, balances, allOptions }: MyP
           p.Gamma,
           p.Vega,
           p.Theta
+        ]}
+      />
+      <DataView 
+        fields={['Delta', 'Gamma', 'Vega', 'Theta', 'Rho']}
+        entries={[aggregatedPositionGreeks]}
+        entriesPerPage={5}
+        tableRowHeight={45}
+        renderEntry={(p: PositionGreekType) => [
+          (p.Delta / (p.totalSize)).toFixed(3),
+          (p.Gamma/ (p.totalSize)).toFixed(3),
+          (p.Vega/ (p.totalSize)).toFixed(3),
+          (p.Theta/ (p.totalSize)).toFixed(3),
+          (p.Rho/ (p.totalSize)).toFixed(3),
         ]}
       />
     </>
